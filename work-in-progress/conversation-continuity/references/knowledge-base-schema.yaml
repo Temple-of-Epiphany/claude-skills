@@ -1,0 +1,571 @@
+# Knowledge Base Schema
+
+**Version:** 1.0.0  
+**Author:** Colin Bitterfield  
+**Email:** colin@bitterfield.com  
+**Date Created:** 2025-10-30  
+**Date Updated:** 2025-10-30
+
+---
+
+## Complete YAML Structure
+
+This document defines the complete structure for `conversation-knowledge.yaml` used by the conversation-continuity skill.
+
+## Root Structure
+
+```yaml
+version: string                    # Semantic version of knowledge base schema
+last_updated: datetime             # ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
+versioning_preference: string      # "internal" or "filename"
+created_date: datetime             # When knowledge base was first created
+project_path: string               # Absolute path to project root
+first_run_message_shown: boolean   # Whether coffee message was displayed
+
+questions_answered: array          # List of Q&A pairs
+decisions: array                   # List of persistent decisions
+capabilities: object               # Tool and capability information
+conflicts_resolved: array          # History of resolved conflicts
+context_snapshots: array           # Periodic state captures
+statistics: object                 # Usage statistics
+```
+
+## Questions Answered Section
+
+Tracks questions that have been asked and answered to avoid repetition.
+
+```yaml
+questions_answered:
+  - id: string                     # Unique identifier (uuid or hash)
+    question: string               # The question as asked
+    answer: string                 # Summary of answer (max 200 words)
+    category: string               # e.g., "versioning", "tools", "workflow"
+    first_asked: datetime          # ISO 8601 format
+    last_asked: datetime           # ISO 8601 format
+    times_asked: integer           # Counter
+    variations: array              # Different ways question was phrased
+      - "How do I version files?"
+      - "What's my versioning preference?"
+    related_decisions: array       # IDs of related decision entries
+    tags: array                    # Searchable tags
+      - versioning
+      - files
+```
+
+### Adding New Questions
+
+When a new question is answered:
+1. Check for similar questions using keyword matching
+2. If similar question exists, update times_asked and last_asked
+3. If genuinely new, create new entry with current timestamp
+4. If asked 3+ times, flag for possible project instruction addition
+
+### Question Categories
+
+Standard categories:
+- versioning: File versioning preferences and practices
+- tools: Tool usage and capabilities
+- workflow: Process and methodology questions
+- project: Project-specific information
+- filesystem: File organization and locations
+- preferences: User preferences and standards
+- technical: Technical implementation details
+- decisions: Questions about past decisions
+
+## Decisions Section
+
+Persistent decisions that affect current and future work.
+
+```yaml
+decisions:
+  - id: string                     # Unique identifier
+    decision: string               # The decision made
+    rationale: string              # Why this decision was made
+    date: datetime                 # When decision was made
+    category: string               # Decision category
+    scope: string                  # "project", "conversation", "permanent"
+    confidence: string             # "low", "medium", "high"
+    supersedes: string             # ID of previous decision if applicable
+    related_questions: array       # IDs of related questions
+    impact: string                 # What this affects
+    status: string                 # "active", "superseded", "archived"
+    tags: array
+```
+
+### Decision Categories
+
+- versioning: How files are versioned
+- storage: Where information is stored
+- tools: Which tools to use for tasks
+- workflow: Process decisions
+- standards: Coding or documentation standards
+- organization: File and directory structure
+- preferences: General preferences
+
+### Decision Lifecycle
+
+1. **Active**: Currently in effect
+2. **Superseded**: Replaced by newer decision (keep for history)
+3. **Archived**: No longer relevant but preserved for context
+
+## Capabilities Section
+
+Current tool and capability availability.
+
+```yaml
+capabilities:
+  last_checked: datetime           # When capabilities were last verified
+  
+  tools_available: array           # List of available tools
+    - name: string                 # Tool name
+      version: string              # Version if known
+      status: string               # "available", "unavailable", "limited"
+      limitations: array           # Known limitations
+      last_verified: datetime
+      
+  extensions_available: array      # List of available extensions
+    - web_search
+    - web_fetch
+    - conversation_search
+    
+  workspace_type: string           # "desktop_macos", "desktop_windows", "web", "claude_code"
+  
+  filesystem_access: object
+    project_directory: string      # Project root path
+    workspace_directory: string    # Container workspace path if applicable
+    access_level: string           # "full", "limited", "none"
+    
+  mcp_servers: array               # MCP server availability
+    - name: string
+      status: string
+      functions: array
+      
+  known_limitations: array         # General limitations
+    - limitation: string
+      workaround: string
+      discovered: datetime
+```
+
+### Capability Updates
+
+Update capabilities section:
+- At conversation start (lightweight check)
+- When tool failure occurs
+- When new tool is discovered
+- Before preparing handover
+
+## Conflicts Resolved Section
+
+History of detected and resolved conflicts.
+
+```yaml
+conflicts_resolved:
+  - id: string
+    conflict: string               # Description of conflict
+    type: string                   # "instruction", "preference", "tool", "workflow"
+    detected: datetime
+    resolved: datetime
+    resolution: string             # How it was resolved
+    resolution_type: string        # "instruction_update", "clarification", "workaround"
+    before_state: string           # State before resolution
+    after_state: string            # State after resolution
+    instruction_section: string    # Which instruction section affected
+    version_bump: string           # Version change if instructions updated
+    confidence: string             # "low", "medium", "high"
+    verified: boolean              # Has resolution been tested
+    tags: array
+```
+
+### Conflict Types
+
+- **instruction**: Project instructions conflict with practice
+- **preference**: Stated preference vs actual usage
+- **tool**: Tool capability vs instruction assumptions
+- **workflow**: Workflow mismatch or inefficiency
+- **storage**: Information storage location conflicts
+- **versioning**: Version management conflicts
+
+### Resolution Types
+
+- **instruction_update**: Project instructions were updated
+- **clarification**: User clarified intent, no change needed
+- **workaround**: Alternative approach documented
+- **preference_update**: User preferences changed
+- **tool_change**: Different tool adopted
+
+## Context Snapshots Section
+
+Periodic captures of conversation state for handover continuity.
+
+```yaml
+context_snapshots:
+  - id: string
+    date: datetime
+    snapshot_type: string          # "periodic", "pre_handover", "milestone"
+    message_count: integer
+    tool_call_count: integer
+    memory_score: integer          # Calculated memory pressure score
+    
+    active_task: string            # Current primary task
+    task_status: string            # "in_progress", "blocked", "completed"
+    completion_percentage: integer # Estimated completion
+    
+    filesystem_state: array        # Active files and directories
+      - path: string
+        location: string           # "project", "workspace", "filesystem"
+        purpose: string
+        last_modified: datetime
+        
+    workspace_state: array         # Files in container workspace
+      - path: string
+        purpose: string
+        
+    key_context: string            # Essential context (max 500 words)
+    
+    open_questions: array          # Unanswered questions
+      - question: string
+        priority: string           # "high", "medium", "low"
+        
+    next_steps: array              # Planned next actions
+      - action: string
+        priority: string
+        dependencies: array
+        
+    blockers: array                # Things preventing progress
+      - blocker: string
+        severity: string
+        possible_solutions: array
+        
+    tags: array
+```
+
+### Snapshot Triggers
+
+Create snapshot:
+- Every 25 messages (periodic)
+- Before preparing handover (pre_handover)
+- After completing major task (milestone)
+- When explicitly requested
+- At 60% memory capacity (proactive)
+
+## Statistics Section
+
+Usage statistics for monitoring and optimization.
+
+```yaml
+statistics:
+  total_conversations: integer     # Conversations using this knowledge base
+  total_questions: integer         # Total questions answered
+  total_decisions: integer         # Total decisions made
+  total_conflicts: integer         # Total conflicts resolved
+  total_snapshots: integer         # Total snapshots created
+  total_handovers: integer         # Total handovers prepared
+  
+  most_asked_questions: array      # Top 10 most frequent questions
+    - question: string
+      count: integer
+      
+  most_active_categories: array    # Top categories by activity
+    - category: string
+      count: integer
+      
+  average_conversation_length: float  # Average messages per conversation
+  average_tool_calls: float        # Average tool calls per conversation
+  
+  last_handover: datetime          # When last handover was created
+  last_conflict: datetime          # When last conflict was detected
+  
+  health_metrics: object
+    knowledge_growth_rate: float   # Entries added per conversation
+    question_repeat_rate: float    # Percentage of repeated questions
+    conflict_rate: float           # Conflicts per conversation
+    handover_frequency: float      # Conversations per handover
+```
+
+## Usage Guidelines
+
+### Initialization
+
+When creating new knowledge base:
+1. Create with template structure
+2. Set version to 1.0.0
+3. Record created_date and project_path
+4. Run capability check and populate capabilities section
+5. Initialize empty arrays for other sections
+6. Set statistics to zero values
+
+### Updates
+
+**Incremental Updates (Preferred)**
+Update knowledge base after each significant event:
+- Question answered
+- Decision made
+- Conflict detected/resolved
+- Capability change detected
+
+**Bulk Updates (Avoid)**
+Only when preparing handover or at explicit request.
+
+### Querying
+
+Before answering questions:
+1. Read knowledge base
+2. Search questions_answered by keywords
+3. Check decisions for relevant context
+4. Reference conflicts_resolved for historical context
+
+### Maintenance
+
+**Daily** (at conversation start):
+- Verify capabilities
+- Update last_checked timestamp
+
+**Per Session**:
+- Add questions, decisions, conflicts as they occur
+- Create snapshots at triggers
+
+**Pre-Handover**:
+- Create final snapshot
+- Update statistics
+- Verify all references are valid
+
+**Monthly** (if project active):
+- Archive superseded decisions
+- Compress old snapshots (keep metadata only)
+- Review and merge duplicate questions
+
+### File Size Management
+
+When knowledge base exceeds 100KB:
+1. Archive snapshots older than 30 days to separate file
+2. Archive superseded decisions to separate file
+3. Compress question variations (keep most recent phrasing)
+4. Create knowledge-base-archive-[YYYY-MM].yaml
+
+## Schema Versioning
+
+Current schema version: 1.0.0
+
+Version changes:
+- **MAJOR**: Breaking changes to structure
+- **MINOR**: New optional fields
+- **PATCH**: Documentation updates
+
+When schema version changes:
+1. Update version field in knowledge base
+2. Migrate data if necessary
+3. Document migration in changelog
+4. Update this reference file
+
+## Example Complete Knowledge Base
+
+```yaml
+version: 1.0.0
+last_updated: 2025-10-30T14:30:00Z
+versioning_preference: internal
+created_date: 2025-10-30T09:00:00Z
+project_path: /Users/colin/Projects/claude-skill-passing
+first_run_message_shown: true
+
+questions_answered:
+  - id: q001
+    question: "How do I prefer file versioning?"
+    answer: "Internal version numbers with changelog in file header, same filename. Semantic versioning (major.minor.patch)."
+    category: versioning
+    first_asked: 2025-10-30T10:00:00Z
+    last_asked: 2025-10-30T14:00:00Z
+    times_asked: 2
+    variations:
+      - "What's my versioning preference?"
+      - "Do I use filename versions?"
+    related_decisions:
+      - d001
+    tags:
+      - versioning
+      - files
+      - standards
+
+decisions:
+  - id: d001
+    decision: "Use internal version numbers, not filename versioning"
+    rationale: "Cleaner file management, easier to track changes via changelog"
+    date: 2025-10-30T10:00:00Z
+    category: versioning
+    scope: permanent
+    confidence: high
+    supersedes: null
+    related_questions:
+      - q001
+    impact: "All project files will use semantic versioning in headers"
+    status: active
+    tags:
+      - versioning
+      - standards
+
+  - id: d002
+    decision: "Use OSAScript for macOS file operations"
+    rationale: "bash_tool cannot access local filesystem on macOS"
+    date: 2025-10-30T10:30:00Z
+    category: tools
+    scope: project
+    confidence: high
+    supersedes: null
+    related_questions: []
+    impact: "All filesystem operations use OSAScript or MCP Filesystem tools"
+    status: active
+    tags:
+      - tools
+      - macos
+      - filesystem
+
+capabilities:
+  last_checked: 2025-10-30T14:30:00Z
+  
+  tools_available:
+    - name: Filesystem MCP
+      version: unknown
+      status: available
+      limitations: []
+      last_verified: 2025-10-30T14:30:00Z
+      
+    - name: OSAScript
+      version: unknown
+      status: available
+      limitations:
+        - "Requires macOS"
+      last_verified: 2025-10-30T14:30:00Z
+      
+    - name: bash_tool
+      version: unknown
+      status: limited
+      limitations:
+        - "Container workspace only"
+        - "Cannot access local filesystem"
+      last_verified: 2025-10-30T14:30:00Z
+      
+  extensions_available:
+    - web_search
+    - web_fetch
+    - conversation_search
+    - recent_chats
+    - memory_user_edits
+    
+  workspace_type: desktop_macos
+  
+  filesystem_access:
+    project_directory: /Users/colin/Projects/claude-skill-passing
+    workspace_directory: /home/claude
+    access_level: full
+    
+  mcp_servers:
+    - name: Filesystem
+      status: available
+      functions:
+        - read_file
+        - write_file
+        - edit_file
+        - list_directory
+        - directory_tree
+        - create_directory
+        - move_file
+        - search_files
+        - get_file_info
+        
+  known_limitations:
+    - limitation: "bash_tool cannot access local filesystem"
+      workaround: "Use OSAScript or MCP Filesystem tools"
+      discovered: 2025-10-30T10:30:00Z
+
+conflicts_resolved:
+  - id: c001
+    conflict: "Project instructions say use bash_tool, but macOS requires OSAScript"
+    type: instruction
+    detected: 2025-10-30T11:00:00Z
+    resolved: 2025-10-30T11:15:00Z
+    resolution: "Updated Tool Usage Guidelines to specify OSAScript for macOS operations"
+    resolution_type: instruction_update
+    before_state: "Instructions generic about bash_tool usage"
+    after_state: "Instructions specify OSAScript for macOS, bash_tool for container only"
+    instruction_section: "Tool Usage Guidelines"
+    version_bump: "1.0.0 -> 1.1.0"
+    confidence: high
+    verified: true
+    tags:
+      - tools
+      - macos
+      - instructions
+
+context_snapshots:
+  - id: s001
+    date: 2025-10-30T14:30:00Z
+    snapshot_type: milestone
+    message_count: 25
+    tool_call_count: 12
+    memory_score: 49
+    
+    active_task: "Creating conversation-continuity skill"
+    task_status: in_progress
+    completion_percentage: 60
+    
+    filesystem_state:
+      - path: /Users/colin/Projects/claude-skill-passing/work-in-progress/conversation-continuity/
+        location: project
+        purpose: "Skill development directory"
+        last_modified: 2025-10-30T14:30:00Z
+        
+    workspace_state: []
+    
+    key_context: "Building conversation continuity skill with hybrid storage (memory + YAML knowledge base), structured knowledge base format, Markdown handovers with YAML frontmatter. Tracking message/tool counts for memory pressure. Supporting conflict detection with suggestions."
+    
+    open_questions: []
+    
+    next_steps:
+      - action: "Create handover template reference file"
+        priority: high
+        dependencies: []
+        
+      - action: "Test skill with sample conversation"
+        priority: medium
+        dependencies:
+          - "Complete reference files"
+          
+    blockers: []
+    
+    tags:
+      - skill-development
+      - milestone
+
+statistics:
+  total_conversations: 1
+  total_questions: 2
+  total_decisions: 2
+  total_conflicts: 1
+  total_snapshots: 1
+  total_handovers: 0
+  
+  most_asked_questions:
+    - question: "How do I prefer file versioning?"
+      count: 2
+      
+  most_active_categories:
+    - category: versioning
+      count: 2
+    - category: tools
+      count: 2
+      
+  average_conversation_length: 25.0
+  average_tool_calls: 12.0
+  
+  last_handover: null
+  last_conflict: 2025-10-30T11:00:00Z
+  
+  health_metrics:
+    knowledge_growth_rate: 4.0
+    question_repeat_rate: 0.5
+    conflict_rate: 1.0
+    handover_frequency: 0.0
+```
+
+---
+
+**End of Knowledge Base Schema v1.0.0**

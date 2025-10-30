@@ -1,0 +1,286 @@
+version: 1.0.0
+last_updated: 2025-10-30T14:30:00Z
+versioning_preference: internal
+created_date: 2025-10-30T09:00:00Z
+project_path: /Users/colin/Projects/claude-skill-passing
+first_run_message_shown: true
+
+questions_answered:
+  - id: q001
+    question: "How do I prefer file versioning?"
+    answer: "Internal version numbers with changelog in file header, same filename. Semantic versioning (major.minor.patch)."
+    category: versioning
+    first_asked: 2025-10-30T10:00:00Z
+    last_asked: 2025-10-30T14:00:00Z
+    times_asked: 2
+    variations:
+      - "What's my versioning preference?"
+      - "Do I use filename versions?"
+    related_decisions:
+      - d001
+    tags:
+      - versioning
+      - files
+      - standards
+
+  - id: q002
+    question: "Which tools should I use on macOS for filesystem operations?"
+    answer: "Use OSAScript or MCP Filesystem tools. bash_tool only works in container workspace and cannot access local filesystem."
+    category: tools
+    first_asked: 2025-10-30T10:30:00Z
+    last_asked: 2025-10-30T10:30:00Z
+    times_asked: 1
+    variations: []
+    related_decisions:
+      - d002
+    tags:
+      - tools
+      - macos
+      - filesystem
+
+decisions:
+  - id: d001
+    decision: "Use internal version numbers, not filename versioning"
+    rationale: "Cleaner file management, easier to track changes via changelog"
+    date: 2025-10-30T10:00:00Z
+    category: versioning
+    scope: permanent
+    confidence: high
+    supersedes: null
+    related_questions:
+      - q001
+    impact: "All project files will use semantic versioning in headers"
+    status: active
+    tags:
+      - versioning
+      - standards
+
+  - id: d002
+    decision: "Use OSAScript for macOS file operations"
+    rationale: "bash_tool cannot access local filesystem on macOS"
+    date: 2025-10-30T10:30:00Z
+    category: tools
+    scope: project
+    confidence: high
+    supersedes: null
+    related_questions:
+      - q002
+    impact: "All filesystem operations use OSAScript or MCP Filesystem tools"
+    status: active
+    tags:
+      - tools
+      - macos
+      - filesystem
+
+  - id: d003
+    decision: "Store critical facts in project memory, detailed info in knowledge base"
+    rationale: "Optimize for memory efficiency while maintaining complete context"
+    date: 2025-10-30T14:00:00Z
+    category: storage
+    scope: project
+    confidence: high
+    supersedes: null
+    related_questions: []
+    impact: "Information routing follows hybrid storage strategy"
+    status: active
+    tags:
+      - storage
+      - memory
+      - optimization
+
+capabilities:
+  last_checked: 2025-10-30T14:30:00Z
+  
+  tools_available:
+    - name: Filesystem MCP
+      version: unknown
+      status: available
+      limitations: []
+      last_verified: 2025-10-30T14:30:00Z
+      
+    - name: OSAScript
+      version: unknown
+      status: available
+      limitations:
+        - "Requires macOS"
+      last_verified: 2025-10-30T14:30:00Z
+      
+    - name: bash_tool
+      version: unknown
+      status: limited
+      limitations:
+        - "Container workspace only"
+        - "Cannot access local filesystem"
+      last_verified: 2025-10-30T14:30:00Z
+      
+    - name: PDF Tools
+      version: unknown
+      status: available
+      limitations: []
+      last_verified: 2025-10-30T14:30:00Z
+      
+    - name: Docling MCP
+      version: unknown
+      status: available
+      limitations: []
+      last_verified: 2025-10-30T14:30:00Z
+      
+  extensions_available:
+    - web_search
+    - web_fetch
+    - conversation_search
+    - recent_chats
+    - memory_user_edits
+    
+  workspace_type: desktop_macos
+  
+  filesystem_access:
+    project_directory: /Users/colin/Projects/claude-skill-passing
+    workspace_directory: /home/claude
+    access_level: full
+    
+  mcp_servers:
+    - name: Filesystem
+      status: available
+      functions:
+        - read_file
+        - write_file
+        - edit_file
+        - list_directory
+        - directory_tree
+        - create_directory
+        - move_file
+        - search_files
+        - get_file_info
+        
+    - name: PDF Tools
+      status: available
+      functions:
+        - list_pdfs
+        - read_pdf_fields
+        - fill_pdf
+        - read_pdf_content
+        
+    - name: Docling MCP
+      status: available
+      functions:
+        - convert_document_into_docling_document
+        - export_docling_document_to_markdown
+        
+  known_limitations:
+    - limitation: "bash_tool cannot access local filesystem"
+      workaround: "Use OSAScript or MCP Filesystem tools"
+      discovered: 2025-10-30T10:30:00Z
+
+conflicts_resolved:
+  - id: c001
+    conflict: "Project instructions say use bash_tool, but macOS requires OSAScript"
+    type: instruction
+    detected: 2025-10-30T11:00:00Z
+    resolved: 2025-10-30T11:15:00Z
+    resolution: "Updated Tool Usage Guidelines to specify OSAScript for macOS operations"
+    resolution_type: instruction_update
+    before_state: "Instructions generic about bash_tool usage"
+    after_state: "Instructions specify OSAScript for macOS, bash_tool for container only"
+    instruction_section: "Tool Usage Guidelines"
+    version_bump: "1.0.0 -> 1.1.0"
+    confidence: high
+    verified: true
+    tags:
+      - tools
+      - macos
+      - instructions
+
+context_snapshots:
+  - id: s001
+    date: 2025-10-30T14:30:00Z
+    snapshot_type: milestone
+    message_count: 25
+    tool_call_count: 12
+    memory_score: 49
+    
+    active_task: "Creating conversation-continuity skill"
+    task_status: in_progress
+    completion_percentage: 80
+    
+    filesystem_state:
+      - path: /Users/colin/Projects/claude-skill-passing/work-in-progress/conversation-continuity/
+        location: project
+        purpose: "Skill development directory"
+        last_modified: 2025-10-30T14:30:00Z
+        
+      - path: /Users/colin/Projects/claude-skill-passing/work-in-progress/conversation-continuity/SKILL.md
+        location: project
+        purpose: "Main skill documentation"
+        last_modified: 2025-10-30T14:30:00Z
+        
+      - path: /Users/colin/Projects/claude-skill-passing/work-in-progress/conversation-continuity/references/
+        location: project
+        purpose: "Reference documentation"
+        last_modified: 2025-10-30T14:30:00Z
+        
+      - path: /Users/colin/Projects/claude-skill-passing/work-in-progress/conversation-continuity/scripts/
+        location: project
+        purpose: "Helper scripts"
+        last_modified: 2025-10-30T14:30:00Z
+        
+    workspace_state: []
+    
+    key_context: "Building conversation continuity skill with hybrid storage (memory + YAML knowledge base), structured knowledge base format, Markdown handovers with YAML frontmatter. Tracking message/tool counts for memory pressure. Supporting conflict detection with suggestions. Skill follows skill-creator framework with SKILL.md, references, and scripts."
+    
+    open_questions: []
+    
+    next_steps:
+      - action: "Test skill with real conversation scenario"
+        priority: high
+        dependencies: []
+        
+      - action: "Create example handover document"
+        priority: medium
+        dependencies:
+          - "Complete skill development"
+          
+      - action: "Move skill to completed skills directory"
+        priority: medium
+        dependencies:
+          - "Test skill"
+          - "Verify all documentation"
+          
+    blockers: []
+    
+    tags:
+      - skill-development
+      - milestone
+      - conversation-continuity
+
+statistics:
+  total_conversations: 1
+  total_questions: 2
+  total_decisions: 3
+  total_conflicts: 1
+  total_snapshots: 1
+  total_handovers: 0
+  
+  most_asked_questions:
+    - question: "How do I prefer file versioning?"
+      count: 2
+      
+  most_active_categories:
+    - category: versioning
+      count: 2
+    - category: tools
+      count: 2
+    - category: storage
+      count: 1
+      
+  average_conversation_length: 25.0
+  average_tool_calls: 12.0
+  
+  last_handover: null
+  last_conflict: 2025-10-30T11:00:00Z
+  
+  health_metrics:
+    knowledge_growth_rate: 6.0
+    question_repeat_rate: 0.5
+    conflict_rate: 1.0
+    handover_frequency: 0.0
