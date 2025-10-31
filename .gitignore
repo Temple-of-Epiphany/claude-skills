@@ -1,9 +1,5 @@
 # macOS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
 .AppleDouble
 .LSOverride
 
@@ -13,7 +9,9 @@
 # Files that might appear in the root of a volume
 .DocumentRevisions-V100
 .fseventsd
+.Spotlight-V100
 .TemporaryItems
+.Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
 
@@ -22,7 +20,7 @@
 .AppleDesktop
 Network Trash Folder
 Temporary Items
-.apdisk
+.afl-icon
 
 # Python
 __pycache__/
@@ -45,25 +43,26 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
+
+# Virtual environments
 venv/
 ENV/
 env/
 
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
+# Logs
+*.log
+
 # Temporary files
 *.tmp
 *.bak
-*.log
+*.backup
 
-# OS generated files
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
+# Git
+*.orig
