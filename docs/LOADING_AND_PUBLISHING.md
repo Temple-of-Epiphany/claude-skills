@@ -1,10 +1,14 @@
 # Loading and Publishing Skills
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Author:** Colin Bitterfield  
 **Email:** colin@bitterfield.com  
 **Date Created:** 2025-10-30  
 **Date Updated:** 2025-10-30
+
+## Changelog
+- **1.1.0** (2025-10-30): Added complete GitHub setup with Temple-of-Epiphany/cbitterfield credentials
+- **1.0.0** (2025-10-30): Initial documentation
 
 ---
 
