@@ -63,18 +63,34 @@ validate-%: ## Validate specific skill (e.g., make validate-conversation-continu
 	@$(PYTHON) $(SCRIPTS_DIR)/quick_validate.py $(SKILLS_SOURCE_DIR)/$*
 	@echo "$(COLOR_GREEN)✅ $* validated$(COLOR_RESET)"
 
-clean: ## Remove all packaged .skill files
-	@echo "$(COLOR_YELLOW)🧹 Cleaning packaged skills...$(COLOR_RESET)"
+clean: ## Remove specific packaged skill (requires NAME variable, e.g., make clean NAME=conversation-continuity)
+ifdef NAME
+	@echo "$(COLOR_YELLOW)🧹 Cleaning $(NAME).skill...$(COLOR_RESET)"
+	@rm -f $(SKILLS_OUTPUT_DIR)/$(NAME).skill
+	@echo "$(COLOR_GREEN)✅ $(NAME).skill removed$(COLOR_RESET)"
+else
+	@echo "$(COLOR_YELLOW)⚠️  Please provide a skill name:$(COLOR_RESET)"
+	@echo "   make clean NAME=conversation-continuity"
+	@echo ""
+	@echo "$(COLOR_BLUE)Or use:$(COLOR_RESET)"
+	@echo "   make clean-all    - Remove all packaged skills"
+	@echo "   make clean-cache  - Remove only cache files"
+endif
+
+clean-all: ## Remove all packaged skills and cache files
+	@echo "$(COLOR_YELLOW)🧹 Cleaning all packaged skills and cache...$(COLOR_RESET)"
 	@rm -f $(SKILLS_OUTPUT_DIR)/*.skill
 	@rm -rf $(SCRIPTS_DIR)/__pycache__
 	@find . -name "*.pyc" -delete
 	@find . -name ".DS_Store" -delete
-	@echo "$(COLOR_GREEN)✅ Cleaned$(COLOR_RESET)"
+	@echo "$(COLOR_GREEN)✅ All cleaned$(COLOR_RESET)"
 
-clean-%: ## Remove specific packaged skill (e.g., make clean-conversation-continuity)
-	@echo "$(COLOR_YELLOW)🧹 Cleaning $*.skill...$(COLOR_RESET)"
-	@rm -f $(SKILLS_OUTPUT_DIR)/$*.skill
-	@echo "$(COLOR_GREEN)✅ $*.skill removed$(COLOR_RESET)"
+clean-cache: ## Remove only cache files (keep packaged skills)
+	@echo "$(COLOR_YELLOW)🧹 Cleaning cache files...$(COLOR_RESET)"
+	@rm -rf $(SCRIPTS_DIR)/__pycache__
+	@find . -name "*.pyc" -delete
+	@find . -name ".DS_Store" -delete
+	@echo "$(COLOR_GREEN)✅ Cache cleaned$(COLOR_RESET)"
 
 install: ## Install required Python dependencies
 	@echo "$(COLOR_YELLOW)📥 Installing dependencies...$(COLOR_RESET)"
@@ -175,7 +191,7 @@ endif
 promote-skill: ## Move skill from WIP to source (requires NAME variable)
 ifndef NAME
 	@echo "$(COLOR_YELLOW)⚠️  Please provide a skill name:$(COLOR_RESET)"
-	@echo "   make promote-skill NAME=my-skill"
+	@echo "   make promote NAME=my-skill"
 else
 	@echo "$(COLOR_YELLOW)📦 Promoting $(NAME) to source...$(COLOR_RESET)"
 	@mv $(WIP_DIR)/$(NAME) $(SKILLS_SOURCE_DIR)/$(NAME)
@@ -183,5 +199,7 @@ else
 	@echo ""
 	@echo "Next step: make $(NAME)"
 endif
+
+promote: promote-skill ## Alias for promote-skill (shorthand)
 
 .PHONY: $(SKILLS)
