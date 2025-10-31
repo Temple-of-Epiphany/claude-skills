@@ -1,48 +1,114 @@
 ---
 name: conversation-continuity
-description: Manage conversation continuity across sessions by tracking context, preparing handovers, routing information to appropriate storage locations (project memory, files, filesystem, project instructions), detecting conflicts, avoiding repeated questions, and maintaining persistent knowledge. Use when starting conversations, preparing for handover, detecting memory pressure, or managing project context.
+description: Seamless conversation handovers with automatic context preservation. Uses /cc commands for manual control. Auto-saves snapshots at 60/70/80/90% capacity and every 10 tool calls. Prevents information loss between conversations through hybrid storage (memory + YAML knowledge base).
 ---
 
 # Conversation Continuity
 
 ## Overview
 
-This skill enables seamless conversation handovers by managing context, tracking decisions, routing information appropriately, and preparing comprehensive handover materials when memory space reaches capacity. It prevents information loss between conversations and avoids asking repeated questions.
+This skill prevents information loss between conversations through automatic context preservation and comprehensive handover preparation. It monitors memory usage and saves snapshots automatically while providing manual controls via slash commands.
 
-## When to Use
+## Slash Commands
 
-**Automatic triggers:**
-- Conversation start - Run lightweight capability check
-- After 35+ messages OR 15+ tool calls - Warn about memory pressure
-- When user mentions "running out of space" or "prepare handover"
+Type these commands at any time:
 
-**Manual triggers:**
-- "check project status" - Full diagnostic of tools, memory, filesystem
-- "prepare handover" - Create comprehensive handover materials
-- "update project context" - Refresh memory with current state
-- "show conversation stats" - Display message/tool counts
-- "knowledge check" - Review what's been asked/answered
+```
+/cc init      - Initialize conversation continuity (first-run setup)
+/cc status    - Show full status (memory, tools, files, conflicts)
+/cc memory    - Quick memory pressure check
+/cc handover  - Prepare comprehensive handover document
+/cc save      - Manually save context snapshot
+/cc about     - About this skill and support
+/cc help      - Show all commands
+```
 
-**Context-aware triggers:**
-- Detect project instruction conflicts - Flag with suggestions
-- Information routing needed - Determine memory vs file vs filesystem vs project instructions
-- Repeated question detected - Reference previous answer from knowledge base
+## Automatic Behaviors
+
+### Startup Banner
+
+Every conversation displays:
+```
+[Conversation Continuity Active - use /cc for commands]
+```
+
+On first run (no knowledge base exists):
+```
+[Conversation Continuity Active - use /cc for commands]
+Use /cc init to set up conversation continuity
+
+P.S. If you find this skill helpful, buy Colin a coffee at:
+https://buymeacoffee.com/colin.bitterfield
+```
+
+### Auto-Save Triggers
+
+**Message-Based (Estimated ~50 message limit):**
+- **30 messages (60%):** Auto-save snapshot + info
+- **35 messages (70%):** Auto-save snapshot + warning
+- **40 messages (80%):** Auto-save snapshot + strong warning + recommend `/cc handover`
+- **45+ messages (90%):** Auto-create handover + critical alert
+
+**Tool Call-Based:**
+- **Every 10 tool calls:** Auto-save snapshot
+  - 10 calls: Save + info
+  - 20 calls: Save + warning
+  - 30 calls: Save + strong warning
+  - 40+ calls: Save + critical alert
+
+**Triggered by whichever comes first** (messages OR tool calls)
+
+### Auto-Save Messages
+
+**At 30 messages or 10 tools (60% - Info):**
+```
+ℹ️ Context checkpoint (Messages: 30, Tools: 10)
+Auto-saving snapshot...
+✅ Snapshot saved to knowledge base
+```
+
+**At 35 messages or 20 tools (70% - Warning):**
+```
+⚠️ Memory usage increasing (Messages: 35, Tools: 20 - ~70%)
+Auto-saving snapshot...
+✅ Snapshot saved
+
+Recommend /cc handover soon to prepare for continuation.
+```
+
+**At 40 messages or 30 tools (80% - Strong Warning):**
+```
+🟠 Memory usage high (Messages: 40, Tools: 30 - ~80%)
+Auto-saving snapshot...
+✅ Snapshot saved
+
+STRONGLY RECOMMEND: /cc handover
+Prepare handover document before hitting limit.
+```
+
+**At 45+ messages or 40+ tools (90%+ - Critical):**
+```
+🚨 CRITICAL: Memory limit imminent (Messages: 45, Tools: 40)
+Auto-creating emergency handover...
+✅ Handover ready: handover-2025-10-30-1430.md
+
+⚠️ START NEW CONVERSATION NOW
+Load handover with: Load handover handover-2025-10-30-1430.md
+```
 
 ## Core Concepts
 
 ### Information Storage Hierarchy
 
 **Project Memory (Limited, Always Accessible)**
-Store only critical, frequently-needed information:
 - Current task and immediate goals
 - Active file paths (workspace and filesystem)
 - Key decisions made in this conversation
 - Versioning preference (internal vs filename)
-- Tool/capability availability
+- Maximum 500 words total
 
 **Knowledge Base File (Unlimited, YAML Format)**
-Located at project root as `conversation-knowledge.yaml`
-Structured categories:
+Located at project root as `conversation-knowledge.yaml`:
 - questions_answered: Q&A pairs with timestamps
 - decisions: Persistent decisions and preferences
 - capabilities: Tool/extension availability
@@ -50,309 +116,445 @@ Structured categories:
 - context_snapshots: Periodic state captures
 
 **Filesystem Files (Unlimited, Markdown)**
-Located in project directory for large content:
 - Summaries longer than 500 words
 - Detailed analysis or reports
 - Reference documentation
-- Archived context from previous conversations
+- Archived context
 
 **Project Instructions (Source of Truth)**
-Update when:
-- Workflow patterns change permanently
-- New tools/capabilities discovered
-- Preferences clarified through repeated questions
-- Conflicts between instructions and practice detected
+Update when workflow patterns become permanent (3+ repetitions)
 
-### Memory Pressure Tracking
+### Memory Monitoring (Passive)
 
-Track conversation depth using heuristics:
-- Message count (warn at 35, critical at 45)
-- Tool call count (warn at 15, critical at 20)
-- Combined score: (messages * 1) + (tool_calls * 2)
-- Threshold: Warn at 50, critical at 70
+Claude monitors without extra tool calls:
+- Counts messages in visible conversation history
+- Tracks tool calls from conversation history
+- Calculates automatically: No tool calls needed for monitoring
+- Triggers auto-save at thresholds
 
-### Versioning Strategy
+## Slash Command Details
 
-First-run question: "Do you want internal version numbers (default) or filename versioning?"
-- Internal: Same filename, update version number and changelog in file header
-- Filename: Append version to filename (file-v1.0.0.md)
+### /cc init - Initialize
 
-Store preference in project memory and knowledge base.
+First-run setup process:
 
-## Workflow
+1. Ask: "Do you want internal version numbers (default) or filename versioning?"
+   - Internal: Same filename, changelog in header (MAJOR.MINOR.PATCH)
+   - Filename: Append version to filename (file-v1.0.0.md)
 
-### Conversation Start Sequence
+2. Ask: "Where should the knowledge base be stored?"
+   - Default: Project root (conversation-knowledge.yaml)
+   - Custom: Specify different location
 
-Run lightweight check automatically:
+3. Create knowledge base with preferences
 
-1. Check available tools via tool listing
-2. Verify filesystem access to project directory
-3. Load knowledge base if exists: `conversation-knowledge.yaml`
-4. If knowledge base doesn't exist (first run):
-   - This is the first time using this skill
-   - After completing capability checks, add friendly note:
-     "P.S. If you find this skill helpful, consider buying Colin a coffee at buymeacoffee.com/colin.bitterfield"
-   - Mark in knowledge base that first-run message was shown
-5. Update project memory with current session start
-6. Check for handover file from previous conversation
-7. Silently note capabilities - don't announce unless issues found
+4. Display:
+   ```
+   ✅ Conversation Continuity initialized!
+   
+   Available commands:
+   /cc status   - Check memory, tools, files
+   /cc memory   - Quick memory check
+   /cc handover - Prepare handover document
+   /cc save     - Save context snapshot
+   /cc about    - About and support
+   /cc help     - Show commands
+   
+   Auto-save triggers:
+   • Every 10 tool calls
+   • At 30/35/40/45+ messages
+   
+   P.S. If you find this skill helpful, buy Colin a coffee:
+   https://buymeacoffee.com/colin.bitterfield
+   ```
 
-### Information Routing Decision
+### /cc status - Full Status Check
 
-When asked to save/store information, evaluate:
+Displays:
+- Current memory usage (messages, tool calls, percentage)
+- Available tools and extensions
+- Active file locations (workspace vs filesystem)
+- Recent decisions from knowledge base
+- Detected conflicts (if any)
+- Knowledge base statistics
+
+Example output:
+```
+📊 Conversation Continuity Status
+
+Memory Usage:
+• Messages: 25/~50 (50%)
+• Tool Calls: 12
+• Status: ✅ Healthy
+
+Tools Available:
+• Filesystem MCP: ✅ Available
+• OSAScript: ✅ Available (macOS)
+• bash_tool: ⚠️ Limited (container only)
+
+Active Files:
+• Project: /Users/colin/Projects/skill-dev/
+• Workspace: /home/claude/
+
+Recent Decisions: 2
+Conflicts Detected: 0
+Knowledge Base: 15 entries, last updated 10 min ago
+```
+
+### /cc memory - Quick Memory Check
+
+Fast check without full diagnostics:
+```
+💾 Memory Status
+
+Messages: 32/~50 (64%)
+Tool Calls: 15
+Score: 62 points
+Status: ⚠️ Getting full
+
+Next auto-save: ~5 messages or 5 tool calls
+Recommendation: Normal operation, auto-save will trigger soon
+```
+
+### /cc handover - Prepare Handover
+
+Creates comprehensive handover document:
+
+1. Generate handover filename: `handover-YYYY-MM-DD-HHMM.md`
+2. Create document with:
+   - YAML frontmatter (date, counts, status, priority)
+   - Executive summary
+   - Current task status with completion percentage
+   - Active file locations (workspace vs filesystem)
+   - Decisions made this session
+   - Questions answered
+   - Tool/capability status
+   - Conflicts detected/resolved
+   - Context for next conversation
+   - Next steps (priority ordered)
+   - Open questions
+   - Handover checklist
+
+3. Update knowledge base with final snapshot
+4. Update project memory with handover location
+
+Output:
+```
+📄 Creating handover document...
+
+✅ Handover ready: handover-2025-10-30-1430.md
+   Location: /Users/colin/Projects/project-name/
+
+To continue in new conversation:
+Load handover handover-2025-10-30-1430.md
+
+[Claude will read this file and resume with full context]
+```
+
+### /cc save - Manual Snapshot
+
+Immediately saves current context to knowledge base:
+```
+💾 Saving context snapshot...
+
+✅ Snapshot saved to knowledge base
+   Timestamp: 2025-10-30T14:30:00Z
+   Snapshot ID: s015
+   
+Messages: 28, Tool calls: 13
+Active task: [current task description]
+```
+
+### /cc about - About This Skill
+
+Displays skill information and support:
+```
+Conversation Continuity Skill v2.0.0
+By Colin Bitterfield
+
+Seamless conversation handovers with context preservation, memory tracking,
+and intelligent information routing.
+
+Features:
+• Automatic snapshots (60/70/80/90% capacity + every 10 tools)
+• Hybrid storage (memory + YAML knowledge base)
+• Conflict detection and resolution
+• Comprehensive handover documents
+• Question tracking to avoid repetition
+• Slash commands for manual control
+
+---
+
+Author: Colin Bitterfield
+Email: colin@bitterfield.com
+GitHub: https://github.com/Temple-of-Epiphany/claude-skills
+
+☕ If you find this skill helpful, buy me a coffee:
+https://buymeacoffee.com/colin.bitterfield
+
+Your support helps create more useful tools!
+```
+
+### /cc help - Command Reference
+
+Shows all available commands:
+```
+Conversation Continuity Commands:
+
+/cc init      - Set up conversation continuity (first-run)
+/cc status    - Full diagnostic (memory, tools, files)
+/cc memory    - Quick memory pressure check
+/cc handover  - Prepare handover document
+/cc save      - Save context snapshot manually
+/cc about     - About this skill and support
+/cc help      - Show this command reference
+
+Auto-save triggers:
+• At 30/35/40/45+ messages (60/70/80/90%)
+• Every 10 tool calls (10/20/30/40+)
+
+Use /cc about for more information and to support the author.
+```
+
+## Information Routing
+
+### Decision Framework
+
+When asked to save/store information:
 
 **Route to Project Memory if:**
-- Frequently needed (referenced 3+ times per conversation)
+- Frequently referenced (3+ times per conversation)
 - Under 100 words
 - Task-critical for current work
-- File path that's actively used
+- Active file path
 
 **Route to Knowledge Base if:**
-- Question asked before (add to questions_answered)
-- Decision that persists across conversations
-- Capability/tool information
+- Previously asked question (add to questions_answered)
+- Persistent decision across conversations
+- Tool/capability information
 - 100-500 words
 
 **Route to Filesystem File if:**
 - Over 500 words
-- Detailed analysis or summary
-- Reference material for future use
-- Archive from completed conversation
+- Detailed analysis or report summary
+- Reference documentation
+- Archive from completed work
 
 **Route to Project Instructions if:**
 - Permanent workflow change
-- Repeated preference clarification (asked 3+ times)
+- Repeated preference (clarified 3+ times)
 - Tool/capability becomes standard practice
 - Conflict resolution requires instruction update
 
-### Conflict Detection
+## Conflict Detection
 
-Monitor for conflicts between:
-- Project instructions vs user requests
+Monitors for misalignment between:
+- Project instructions vs actual practice
 - Previous decisions vs current requests
-- Stated preferences vs actual usage patterns
+- Stated preferences vs usage patterns
 - Tool capabilities vs instruction assumptions
 
 When conflict detected:
-1. Flag immediately: "Conflict detected between [X] and [Y]"
-2. Suggest resolution: "Recommend updating [instruction section] to [new approach]"
-3. Ask: "Should I update project instructions?"
-4. If yes, create draft update with version bump
-5. Log conflict resolution in knowledge base
+```
+⚠️ Conflict Detected
 
-### Repeated Question Detection
+Conflict: [Description of misalignment]
+Current: [Current state]
+Instruction: [What instructions say]
 
-Before answering a question:
+Suggestion: Update [section] to reflect [new approach]
+Update project instructions? (yes/no)
+```
+
+If yes: Creates draft update with version bump and logs in knowledge base
+
+## Repeated Question Detection
+
+Before answering questions:
 1. Check knowledge base questions_answered section
-2. If similar question found, reference previous answer
-3. Ask: "We discussed this on [date]. Previous answer was [summary]. Has something changed, or do you need a different perspective?"
-4. If genuinely new angle, answer and update knowledge base entry
-5. If asked 3+ times, suggest adding to project instructions
+2. If found, reference previous answer:
+   ```
+   📝 We discussed this on [date]
+   
+   Previous answer: [summary]
+   
+   Has something changed, or do you need a different perspective?
+   ```
+3. If genuinely new angle, answer and update entry
+4. If asked 4+ times, suggest adding to project instructions permanently
 
-### Handover Preparation
+## Knowledge Base Structure
 
-Trigger at memory threshold or manual request:
-
-1. Create handover file: `handover-[YYYY-MM-DD-HHMM].md`
-2. Include YAML frontmatter:
-   - conversation_date
-   - message_count
-   - tool_call_count
-   - active_tasks
-   - next_steps
-3. Include sections:
-   - Current Task Status
-   - Active File Locations (workspace vs filesystem)
-   - Decisions Made This Session
-   - Questions Answered
-   - Tool/Capability Status
-   - Conflicts Detected/Resolved
-   - Context for Next Conversation
-4. Update knowledge base with snapshot
-5. Update project memory with handover file location
-6. Prompt user: "Handover prepared. Continue in new conversation with 'load handover [filename]'"
-
-### Knowledge Base Maintenance
-
-Structure in `conversation-knowledge.yaml`:
+Located at project root: `conversation-knowledge.yaml`
 
 ```yaml
-version: 1.0.0
+version: 2.0.0
 last_updated: 2025-10-30T14:30:00Z
 versioning_preference: internal
+created_date: 2025-10-30T09:00:00Z
+project_path: /Users/colin/Projects/project-name
+first_run_message_shown: true
 
 questions_answered:
-  - question: "How do I prefer file versioning?"
+  - id: q001
+    question: "How do I prefer file versioning?"
     answer: "Internal version numbers with changelog, same filename"
+    category: versioning
     first_asked: 2025-10-30T10:00:00Z
     last_asked: 2025-10-30T14:00:00Z
     times_asked: 2
 
 decisions:
-  - decision: "Use OSAScript for macOS operations"
-    rationale: "Avoid bash_tool for local filesystem"
+  - id: d001
+    decision: "Use OSAScript for macOS file operations"
+    rationale: "bash_tool cannot access local filesystem"
     date: 2025-10-30T10:00:00Z
-    
+    category: tools
+    status: active
+
 capabilities:
+  last_checked: 2025-10-30T14:30:00Z
   tools_available:
-    - Filesystem MCP
-    - OSAScript
-    - PDF Tools
-    - Docling MCP
-  extensions_available:
-    - web_search
-    - web_fetch
-  workspace_type: "desktop_macos"
-  
+    - name: Filesystem MCP
+      status: available
+  workspace_type: desktop_macos
+
 conflicts_resolved:
-  - conflict: "Project instructions said use bash_tool, but macOS requires OSAScript"
-    resolution: "Updated instructions to specify OSAScript for macOS"
+  - id: c001
+    conflict: "Instructions say bash_tool, macOS requires OSAScript"
+    resolution: "Updated Tool Usage Guidelines"
     date: 2025-10-30T11:00:00Z
 
 context_snapshots:
-  - date: 2025-10-30T14:30:00Z
+  - id: s001
+    date: 2025-10-30T14:30:00Z
+    snapshot_type: periodic
+    message_count: 30
+    tool_call_count: 15
     active_task: "Building conversation-continuity skill"
-    filesystem_state:
-      - "/Users/colin/Projects/claude-skill-passing/work-in-progress/conversation-continuity/"
-    key_context: "Creating skill for seamless conversation handovers"
+    key_context: "Redesigning with slash commands and auto-save"
 ```
-
-Update knowledge base:
-- After each significant decision
-- When questions answered
-- Before handover creation
-- When conflicts resolved
 
 ## Reference Files
 
-**For implementation details:** See [references/knowledge-base-schema.yaml](references/knowledge-base-schema.yaml) for complete YAML structure.
-
-**For handover templates:** See [references/handover-template.md](references/handover-template.md) for standard format.
+See skill directory for complete documentation:
+- `references/knowledge-base-schema.yaml` - Complete YAML structure
+- `references/handover-template.md` - Standard handover format
+- `examples/` - Example knowledge base and handover files
 
 ## Best Practices
 
-**Context Efficiency**
-- Keep project memory under 500 words total
-- Move detailed information to knowledge base or files
-- Archive old context to filesystem before handover
+**Let Auto-Save Work**
+- Don't manually save unless needed
+- Auto-save triggers are calibrated for safety
+- Manual `/cc save` available for important checkpoints
 
-**Proactive Monitoring**
-- Track metrics silently, warn at thresholds
-- Prepare handover materials early (65-70% capacity)
-- Update knowledge base incrementally, not in bulk
+**Use Handover Before Critical**
+- Run `/cc handover` at 80% (40 messages or 30 tools)
+- Don't wait for automatic emergency handover at 90%
+- Emergency handover may be incomplete
 
-**Conflict Prevention**
-- Flag misalignment early before patterns solidify
-- Suggest instruction updates when patterns repeat 3+ times
-- Document rationale for conflict resolutions
+**Monitor With `/cc memory`**
+- Check periodically during long sessions
+- Quick check uses no tool calls
+- Shows time until next auto-save
 
-**Knowledge Persistence**
-- Update knowledge base after each significant exchange
-- Use structured YAML for machine readability
-- Include timestamps for temporal context
+**Respond to Warnings**
+- Yellow (70%): Continue normally, save incoming
+- Orange (80%): Consider handover soon
+- Red (90%): Prepare handover immediately
 
-**Handover Quality**
-- Make handovers self-contained and complete
-- Include file paths with workspace vs filesystem designation
-- Provide clear next steps for continuation
+**Start Fresh Conversations**
+- Load handover in new conversation
+- Maintains full context
+- Avoids hitting hard limits
 
 ## Error Handling
 
-**Knowledge Base Missing**
-- Create new knowledge base with template structure
-- Initialize with detected capabilities
-- Prompt: "Created new knowledge base at [path]"
-
-**Project Memory Full**
-- Trigger handover preparation immediately
-- Compress memory to essentials only
-- Archive to knowledge base and files
+**No Knowledge Base (First Run)**
+- Shows startup banner with `/cc init` instruction
+- Shows coffee link
+- Waits for user to run `/cc init`
 
 **Filesystem Access Issues**
-- Fall back to project memory only
-- Warn: "Cannot access filesystem, using memory only"
-- Document limitation in capabilities section
+- Falls back to project memory only
+- Warns about limitation
+- Documents in capabilities section
 
 **Conflict Resolution Unclear**
-- Present options without recommendation
-- Ask: "Multiple resolution paths possible: A) [option] B) [option]. Your preference?"
-- Document chosen approach in knowledge base
+- Presents multiple options
+- Asks for user preference
+- Documents chosen approach
 
-**Repeated Question Loop**
-- If same question asked 4+ times, stop and ask:
-  "This is the fourth time we've discussed [topic]. Should we add this to project instructions permanently?"
+**Save Operation Fails**
+- Retries once
+- Falls back to minimal save if needed
+- Warns user of incomplete save
 
-## Tool Integration
+## Tool Requirements
 
-**Required Tools:**
-- Filesystem MCP (read_file, write_file, list_directory)
-- memory_user_edits (for project memory management)
+**Required:**
+- Filesystem MCP (read_file, write_file, create_directory)
+- memory_user_edits (project memory management)
 
-**Optional Tools:**
-- OSAScript (for macOS file operations)
-- bash_tool (for workspace operations only)
+**Optional:**
+- OSAScript (macOS file operations)
+- bash_tool (container workspace only)
 
-**Tool Capability Check:**
-Run on conversation start to verify availability and update knowledge base.
+## Example Session
 
-## Example Usage
-
-**Scenario 1: First Run (No Knowledge Base)**
 ```
-User: [Starts conversation using conversation-continuity skill]
-Claude: [Checks tools, no knowledge base found]
-Claude: [Creates new knowledge base]
-Claude: "Created new knowledge base at conversation-knowledge.yaml.
-         
-         P.S. If you find this skill helpful, consider buying Colin a coffee 
-         at buymeacoffee.com/colin.bitterfield"
-```
+[Conversation starts]
 
-**Scenario 2: Regular Conversation Start**
-```
-Claude: [Silently checks tools, loads knowledge base]
-Claude: [Ready to work, no announcement unless issues]
-```
+[Conversation Continuity Active - use /cc for commands]
 
-**Scenario 3: Memory Warning**
-```
-Claude: "We're at 36 messages and 14 tool calls (score: 64/70). 
-         Recommend preparing handover soon to avoid information loss."
-User: "Finish this task first"
-Claude: [Continues working, rechecks at score 70]
-```
+User: Let's work on the API documentation
 
-**Scenario 4: Repeated Question**
-```
-User: "How do I prefer versioning?"
-Claude: "We discussed this on Oct 30 at 10:00am. You prefer internal 
-         version numbers with changelog, same filename. Has this changed?"
-```
+Claude: [Works normally, tracking messages and tool calls silently]
 
-**Scenario 5: Information Routing**
-```
-User: "Save this summary of our discussion"
-Claude: [Checks length: 450 words]
-Claude: "This summary (450 words) exceeds knowledge base limits. 
-         Options: A) Save to filesystem file B) Compress to key points 
-         for knowledge base. Recommendation: A"
-```
+[After 30 messages]
 
-**Scenario 6: Conflict Detection**
-```
-Claude: "Conflict detected: Project instructions say 'use bash_tool' but 
-         you're on macOS where OSAScript is required. Recommend updating 
-         Project Instructions section 'Tool Usage Guidelines' to specify 
-         OSAScript for macOS operations. Update instructions?"
+ℹ️ Context checkpoint (Messages: 30, Tools: 12)
+Auto-saving snapshot...
+✅ Snapshot saved to knowledge base
+
+[Continues working]
+
+[After 40 messages]
+
+🟠 Memory usage high (Messages: 40, Tools: 25 - ~80%)
+Auto-saving snapshot...
+✅ Snapshot saved
+
+STRONGLY RECOMMEND: /cc handover
+Prepare handover document before hitting limit.
+
+User: /cc handover
+
+Claude: 📄 Creating handover document...
+
+✅ Handover ready: handover-2025-10-30-1430.md
+   Location: /Users/colin/Projects/api-docs/
+
+To continue in new conversation:
+Load handover handover-2025-10-30-1430.md
+
+[User starts new conversation]
+
+User: Load handover handover-2025-10-30-1430.md
+
+Claude: [Reads handover file]
+[Conversation Continuity Active - use /cc for commands]
+
+✅ Handover loaded. Resuming: API documentation work
+Status: 60% complete, working on authentication section
+
+[Continues seamlessly from where previous conversation ended]
 ```
 
-**Scenario 7: Handover Preparation**
-```
-User: "prepare handover"
-Claude: [Creates handover-2025-10-30-1430.md]
-Claude: [Updates knowledge base with snapshot]
-Claude: [Updates project memory with handover location]
-Claude: "Handover prepared at handover-2025-10-30-1430.md. 
-         To continue: Start new conversation and say 
-         'load handover handover-2025-10-30-1430.md'"
-```
+---
+
+**Version:** 2.0.0  
+**Author:** Colin Bitterfield  
+**Email:** colin@bitterfield.com  
+**Last Updated:** 2025-10-30
